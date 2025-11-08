@@ -115,15 +115,6 @@ app/
 
 ---
 
-## 💡 Melhorias Futuras
-
-- Estatísticas gráficas de humor e exercícios.  
-- Sistema de mensagens privadas anónimas.  
-- Tradução multilíngue (EN/PT).  
-- Backup automático no Google Drive.  
-
----
-
 ## 👨‍💻 Autor
 
 **Fábio Horta**  
