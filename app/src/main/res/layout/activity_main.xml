@@ -1,0 +1,450 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_teal_gradient"
+    tools:context=".MainActivity">
+
+    <!-- CONTEÚDO COM SCROLL -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        android:clipToPadding="false"
+        android:padding="24dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <!-- Split 2 colunas -->
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/gColSplit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintGuide_percent="0.56" />
+
+            <!-- Cabeçalho -->
+            <TextView
+                android:id="@+id/tvGreeting"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Olá, utilizador!"
+                android:textColor="@color/white"
+                android:textSize="40sp"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/btnProfile"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintHorizontal_bias="0" />
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/btnProfile"
+                android:layout_width="64dp"
+                android:layout_height="60dp"
+                android:contentDescription="Perfil"
+                android:padding="8dp"
+                android:scaleType="centerCrop"
+                android:src="@android:drawable/ic_menu_myplaces"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.OA.Circle"
+                app:strokeColor="@color/white"
+                app:strokeWidth="2dp"
+                app:layout_constraintTop_toTopOf="@id/tvGreeting"
+                app:layout_constraintBottom_toBottomOf="@id/tvGreeting"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <TextView
+                android:id="@+id/tvQuote"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:alpha="0.9"
+                android:text="Tudo vai ficar bem 🌤️"
+                android:textColor="@color/white"
+                android:textSize="25sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvGreeting" />
+
+            <TextView
+                android:id="@+id/tvMoodTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Como te sentes hoje?"
+                android:textColor="@color/white"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvQuote" />
+
+            <!-- Barra de seleção de emojis -->
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/moodGroup"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:minHeight="64dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_mood_group"
+                android:padding="8dp"
+                app:selectionRequired="true"
+                app:singleSelection="true"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvMoodTitle">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/mood1"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    android:includeFontPadding="false"
+                    android:singleLine="true"
+                    android:ellipsize="none"
+                    android:text="😞"
+                    android:textSize="28sp"
+                    android:gravity="center"
+                    app:ensureMinTouchTargetSize="false" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/mood2"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    android:includeFontPadding="false"
+                    android:singleLine="true"
+                    android:ellipsize="none"
+                    android:text="😕"
+                    android:textSize="28sp"
+                    android:gravity="center"
+                    app:ensureMinTouchTargetSize="false" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/mood3"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    android:includeFontPadding="false"
+                    android:singleLine="true"
+                    android:ellipsize="none"
+                    android:text="😐"
+                    android:textSize="28sp"
+                    android:gravity="center"
+                    app:ensureMinTouchTargetSize="false" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/mood4"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    android:includeFontPadding="false"
+                    android:singleLine="true"
+                    android:ellipsize="none"
+                    android:text="🙂"
+                    android:textSize="28sp"
+                    android:gravity="center"
+                    app:ensureMinTouchTargetSize="false" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/mood5"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    android:includeFontPadding="false"
+                    android:singleLine="true"
+                    android:ellipsize="none"
+                    android:text="😄"
+                    android:textSize="28sp"
+                    android:gravity="center"
+                    app:ensureMinTouchTargetSize="false" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+
+            <!-- 2 colunas: Progresso (esq) e Reflexão (dir) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardProgress"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="8dp"
+                app:cardBackgroundColor="@color/white_96"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="6dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/gColSplit"
+                app:layout_constraintTop_toBottomOf="@id/moodGroup">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="O teu progresso"
+                        android:textColor="@color/oa_text"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvProgressEmojis"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Últimos 7 dias: — — — — — — —"
+                        android:textColor="@color/oa_text" />
+
+                    <com.google.android.material.progressindicator.LinearProgressIndicator
+                        android:id="@+id/progressMood"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="8dp"
+                        android:max="100"
+                        app:indicatorColor="@color/oa_teal"
+                        app:trackColor="@color/oa_teal_light" />
+
+                    <TextView
+                        android:id="@+id/tvProgressAvg"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Média: 0%"
+                        android:textColor="@color/oa_text" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardReflexao"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:layout_marginStart="8dp"
+                app:cardBackgroundColor="@color/white_96"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="6dp"
+                app:layout_constraintStart_toStartOf="@id/gColSplit"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@id/cardProgress">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Reflexão guiada"
+                        android:textAlignment="center"
+                        android:textColor="@color/oa_text"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Regista 1–3 pensamentos sobre o teu dia."
+                        android:textAlignment="center"
+                        android:textColor="@color/oa_text" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnOpenDiary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="Abrir reflexão"
+                        app:backgroundTint="@color/oa_teal"
+                        app:cornerRadius="20dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Alinhar o próximo card por baixo da coluna mais alta -->
+            <androidx.constraintlayout.widget.Barrier
+                android:id="@+id/twoColBottom"
+                android:layout_width="1dp"
+                android:layout_height="1dp"
+                app:barrierDirection="bottom"
+                app:constraint_referenced_ids="cardProgress,cardReflexao" />
+
+            <!-- Sugestão de bem-estar -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardWellness"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:cardBackgroundColor="@color/white_96"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="6dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/twoColBottom">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/tvWellnessTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sugestão de bem-estar"
+                        android:textColor="@color/oa_text"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvWellnessBody"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:alpha="0.95"
+                        android:text="A carregar sugestão…"
+                        android:textColor="@color/oa_text" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnWellnessAction"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end"
+                        android:layout_marginTop="8dp"
+                        android:text="Ver sugestão"
+                        app:backgroundTint="@color/oa_teal"
+                        app:cornerRadius="20dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Números de emergência -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardEmergency"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:cardBackgroundColor="@color/white_96"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="6dp"
+                app:layout_constraintTop_toBottomOf="@id/cardWellness"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/tvEmergencyTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Números de emergência"
+                        android:textStyle="bold"
+                        android:textColor="@color/oa_text"
+                        android:textSize="16sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:layout_marginTop="10dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnCall112"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="112"
+                            android:contentDescription="Emergência 112" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnCallSNS24"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:text="SNS 24"
+                            android:contentDescription="SNS 24" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnCallVozAmiga"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:text="Voz Amiga"
+                            android:contentDescription="SOS Voz Amiga" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvEmergencyHint"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Toque para ligar · toque longo para copiar"
+                        android:textColor="@color/oa_text"
+                        android:alpha="0.7"
+                        android:layout_marginTop="6dp"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- BOTTOM NAVIGATION FIXA -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNav"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@color/oa_bottom_nav_bg"
+        app:itemIconTint="@color/bottom_nav_selector"
+        app:itemTextColor="@color/bottom_nav_selector"
+        app:labelVisibilityMode="labeled"
+        app:menu="@menu/menu_bottom_nav"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

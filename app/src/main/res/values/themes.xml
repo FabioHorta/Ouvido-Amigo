@@ -1,0 +1,14 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.OuvidoAmigo" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/oa_teal</item>
+        <item name="colorSecondary">@color/oa_teal_dark</item>
+        <item name="android:statusBarColor">@color/oa_teal_dark</item>
+        <item name="android:navigationBarColor">@color/oa_teal_dark</item>
+    </style>
+    <style name="BottomNavText" parent="@style/TextAppearance.Material3.LabelSmall">
+        <item name="android:textSize">11sp</item>
+    </style>
+
+    <style name="Theme.ProjetoFinal" parent="Base.Theme.ProjetoFinal" />
+</resources>
