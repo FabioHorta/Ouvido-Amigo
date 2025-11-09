@@ -85,7 +85,8 @@ app/
 - **Framework:** Android SDK / AndroidX  
 - **UI:** Material Design 3 + ConstraintLayout  
 - **Autenticação e Cloud:** Firebase Auth + Realtime Database  
-- **Armazenamento local:** SQLite + SharedPreferences  
+- **Armazenamento local:** SQLite + SharedPreferences
+- **Sincronização em vários dispositvos** Permite que uses a mesma conta em dispositivos diferentes e que mantenha a consistência de dados
 - **Sincronização:** WorkManager  
 - **Notificações:** NotificationManagerCompat  
 - **Compatibilidade:** Android 8.0 (API 26) ou superior  
