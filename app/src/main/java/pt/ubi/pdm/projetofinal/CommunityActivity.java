@@ -32,11 +32,8 @@ import java.util.Locale;
 import java.util.Date;
 import java.util.Map;
 
-/**
- * Ecrã da Comunidade:
- * - Lista de publicações (Firebase RTDB, com cache offline).
- * - Criar nova publicação (texto + anónimo opcional).
- */
+// Classe responsável pelo ecrã da Comunidade.
+// Permite visualizar publicações, criar novas e comentar, com suporte a cache offline via Firebase.
 
 public class CommunityActivity extends BaseBottomNavActivity {
 
@@ -49,6 +46,12 @@ public class CommunityActivity extends BaseBottomNavActivity {
     // Lista em memória dos posts (mostrados no RecyclerView)
     private final List<Post> posts = new ArrayList<>();
     private PostAdapter adapter;
+
+
+    // Inicia a interface e os componentes principais.
+    // Liga a barra de navegação inferior, configura o RecyclerView e o SwipeRefreshLayout.
+    // Liga o botão de nova publicação e inicia o carregamento dos posts.
+    // Adiciona listener para verificar conectividade com o Firebase.
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,16 +109,19 @@ public class CommunityActivity extends BaseBottomNavActivity {
                 });
     }
 
+    // Indica que esta Activity corresponde ao item da comunidade na barra de navegação.
     @Override
     protected int currentNavItemId() {
         return R.id.nav_community;
     }
 
-    /* ===================== CARREGAR POSTS ===================== */
+    // ============================================================
+    // Secção: Carregar Posts
+    // ============================================================
 
-    /**
-     * Lê até 100 posts ordenados por createdAt e inverte para mostrar os mais recentes primeiro.
-     */
+    // Carrega até 100 publicações do Firebase ordenadas por data de criação.
+    // Inverte a ordem para mostrar os posts mais recentes primeiro.
+    // Atualiza o RecyclerView com os dados carregados.
     private void loadPostsOnce() {
         postsRef.orderByChild("createdAt").limitToLast(100)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
@@ -137,10 +143,8 @@ public class CommunityActivity extends BaseBottomNavActivity {
                 });
     }
 
-    /**
-     * Caso o refresh fique “preso” (sem internet/tempo de resposta),
-     * desliga o spinner após 4s e informa o utilizador.
-     */
+
+    // Se o carregamento de posts demorar mais de 4 segundos, cancela o spinner e mostra aviso
     private void stopRefreshIfStuck() {
         new android.os.Handler(getMainLooper()).postDelayed(() -> {
             if (swipeRefresh != null && swipeRefresh.isRefreshing()) {
@@ -150,11 +154,13 @@ public class CommunityActivity extends BaseBottomNavActivity {
         }, 4000);
     }
 
-    /* ===================== NOVA PUBLICAÇÃO ===================== */
-    /**
-     * Abre um BottomSheet com o formulário para novo post.
-     * Ao publicar, grava no RTDB com createdAt=ServerValue.TIMESTAMP.
-     */
+    // ============================================================
+    // Secção: Nova Publicação
+    // ============================================================
+
+    // Abre um BottomSheet com formulário para criar nova publicação.
+    // Permite escrever texto e escolher se a publicação será anónima.
+    // Ao submeter, grava no Firebase e atualiza a lista de posts.
     private void openNewPostSheet() {
         BottomSheetDialog dlg = new BottomSheetDialog(this);
         View v = LayoutInflater.from(this).inflate(R.layout.dialog_new_post, null, false);
@@ -194,10 +200,13 @@ public class CommunityActivity extends BaseBottomNavActivity {
         dlg.show();
     }
 
-    /* ===================== COMENTÁRIOS ===================== */
-    /**
-     * Abre um BottomSheet para a lista de comentários de um post.
-     */
+    // ============================================================
+    // Secção:Comentários
+    // ============================================================
+
+    // Abre um BottomSheet com os comentários de uma publicação.
+    // Permite visualizar e adicionar novos comentários.
+    // Os comentários são sincronizados em tempo real com o Firebase.
     private void openCommentsSheet(Post post) {
         BottomSheetDialog dlg = new BottomSheetDialog(this);
         View v = LayoutInflater.from(this).inflate(R.layout.dialog_comments, null, false);
@@ -247,9 +256,8 @@ public class CommunityActivity extends BaseBottomNavActivity {
         dlg.show();
     }
 
-    /**
-     * Formata o cabeçalho com autor e data.
-     */
+
+    // Formata o cabeçalho de uma publicação com autor, texto e data formatada.
     private String formatHeader(Post p) {
         String who = p.author == null ? "Anónimo" : p.author;
         String when = "";
@@ -265,7 +273,12 @@ public class CommunityActivity extends BaseBottomNavActivity {
 
     private void toast(String s) { Toast.makeText(this, s, Toast.LENGTH_SHORT).show(); }
 
-    /* ===================== MODELOS ===================== */
+    // ============================================================
+    // Secção: Modelos
+    // ============================================================
+
+    // Modelo de dados para uma publicação da comunidade.
+    // Contém id, texto, autor, anonimo, data de criação e UID do autor.
     public static class Post {
         public String id;
         public String text;
@@ -276,6 +289,10 @@ public class CommunityActivity extends BaseBottomNavActivity {
         public Post() {}
     }
 
+
+    // Modelo de dados para um comentário associado a uma publicação.
+    // Contém id, texto, autor e data de criação.
+
     public static class Comment {
         public String id;
         public String text;
@@ -284,8 +301,12 @@ public class CommunityActivity extends BaseBottomNavActivity {
         public Comment() {}
     }
 
-    /* ===================== ADAPTERS ===================== */
+    // ============================================================
+    // Secção: Adapters
+    // ============================================================
 
+    // Adapter para o RecyclerView que mostra as publicações.
+    // Liga os dados dos posts à interface e trata do clique para abrir comentários
     private static class PostAdapter extends RecyclerView.Adapter<PostAdapter.VH> {
         interface OnPostClick { void onClick(Post p); }
         private final List<Post> data;
@@ -302,19 +323,23 @@ public class CommunityActivity extends BaseBottomNavActivity {
             }
         }
 
-        @NonNull @Override public VH onCreateViewHolder(@NonNull android.view.ViewGroup p, int vt) {
+        @NonNull
+        @Override
+        public VH onCreateViewHolder(@NonNull android.view.ViewGroup p, int vt) {
             View v = LayoutInflater.from(p.getContext()).inflate(R.layout.item_post, p, false);
             return new VH(v);
         }
 
-        @Override public void onBindViewHolder(@NonNull VH h, int i) {
+        @Override
+        public void onBindViewHolder(@NonNull VH h, int i) {
             Post p = data.get(i);
             h.tvAuthor.setText(p.author == null ? "Anónimo" : p.author);
             h.tvText.setText(p.text);
             h.tvComments.setOnClickListener(v -> onClick.onClick(p));
         }
 
-        @Override public int getItemCount() { return data.size(); }
+        @Override
+        public int getItemCount() { return data.size(); }
     }
 
 }

@@ -44,20 +44,22 @@ public class PerfilActivity extends AppCompatActivity {
     private ImageView imgAvatar;
     private TextInputEditText etName, etDob;
     private TextInputLayout tilDob;
-
     private DatabaseReference profileRef;
     private String uid;
-
     private Uri tempCameraUri = null;
     private File localAvatarFile; // /data/data/<app>/files/avatar_<uid>.jpg
 
-    // Galeria
+    // ============================================================
+    // Secção: Galeria
+    // ============================================================
     private final ActivityResultLauncher<String> pickImage =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (uri != null) handleNewPhotoFromUri(uri);
             });
 
-    // Câmara
+    // ============================================================
+    // Secção: Camera
+    // ============================================================
     private final ActivityResultLauncher<Uri> takePicture =
             registerForActivityResult(new ActivityResultContracts.TakePicture(), ok -> {
                 if (Boolean.TRUE.equals(ok) && tempCameraUri != null) {
@@ -65,7 +67,9 @@ public class PerfilActivity extends AppCompatActivity {
                 }
             });
 
-    // Permissões
+    // ============================================================
+    // Secção: Permissões
+    // ============================================================
     private final ActivityResultLauncher<String[]> reqPerms =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), r -> {
                 if (Boolean.TRUE.equals(r.getOrDefault(Manifest.permission.CAMERA, false))) {
@@ -115,7 +119,9 @@ public class PerfilActivity extends AppCompatActivity {
         loadProfile();
     }
 
-    /* ------------------ LOAD/SAVE PERFIL ------------------ */
+    // ============================================================
+    // Secção: Load/Save Perfil
+    // ============================================================
 
     // Carrega os dados do perfil do Firebase (nome, data de nascimento, foto).
     // Dá prioridade à foto local, depois à foto em Base64, e por fim usa um ícone por defeito.
@@ -181,7 +187,9 @@ public class PerfilActivity extends AppCompatActivity {
                         Toast.makeText(this, "Erro: " + e.getMessage(), Toast.LENGTH_LONG).show());
     }
 
-    /* ------------------ DATE PICKER ------------------ */
+    // ============================================================
+    // Secção: Date Picker
+    // ============================================================
 
     // Abre um seletor de data para escolher a data de nascimento.
     private void openDatePicker() {
@@ -210,7 +218,9 @@ public class PerfilActivity extends AppCompatActivity {
         } catch (Exception e) { return ""; }
     }
 
-    /* ------------------ FOTO: GALERIA/CÂMARA/RTDB ------------------ */
+    // ============================================================
+    // Secção: Imagem de Perfil
+    // ============================================================
 
     // Mostra um diálogo com opções para escolher uma nova foto de perfil:
         // Galeria, Câmara ou Remover foto.
@@ -278,7 +288,9 @@ public class PerfilActivity extends AppCompatActivity {
         Toast.makeText(this, "Foto removida.", Toast.LENGTH_SHORT).show();
     }
 
-    /* ------------------ PASSWORD + LOGOUT ------------------ */
+    // ============================================================
+    // Secção: Password e LogOut
+    // ============================================================
 
     // Mostra um diálogo para alterar a palavra-passe:
     // - Valida os campos e atualiza a password no Firebase.
@@ -373,7 +385,10 @@ public class PerfilActivity extends AppCompatActivity {
         finishAffinity();
     }
 
-    /* ------------------ HELPERS ------------------ */
+    // ============================================================
+    // Secção: Helpers
+    // ============================================================
+
     // Funções auxiliares para validação de campos, manipulação de imagens e conversões Base64.
     private String val(TextInputEditText et) {
         return et.getText() == null ? "" : et.getText().toString().trim();

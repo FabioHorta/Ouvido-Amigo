@@ -20,64 +20,56 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
- // Ecrã de Exercícios:
- // - Lista de exercícios (local) com categorias e progresso
- // - Secção de áudios de relaxamento (res/raw)
- // - Preferências simples (SharedPreferences) para concluídos e lembretes
+
+// Classe responsável pelo ecrã de Exercícios da aplicação.
+// Permite visualizar exercícios por categoria, marcar como concluídos, ouvir áudios de relaxamento e configurar alertas.
 
 public class ExercisesActivity extends BaseBottomNavActivity {
-
-    // --- UI ---
     private TextView tvPercent, tvProgressoSub;
     private RecyclerView rvExercicios, rvAudios;
     private ChipGroup chipGroup;
-    private MaterialSwitch switchLembretes;
-
-    // --- Dados ---
+    private MaterialSwitch switchAlertas;
     private final List<Exercicio> allExercicios = new ArrayList<>();
     private final List<Exercicio> shownExercicios = new ArrayList<>();
     private final List<AudioRelax> audios = new ArrayList<>();
-
     private ExercicioAdapter exAdapter;
     private AudioAdapter audioAdapter;
-
     private static MediaPlayer mp;
     private static int currentlyPlaying = -1; // índice do áudio a tocar, -1 se nenhum
-
-
     private static final String PREFS = "oa_exercises";
     private static final String PREF_DONE = "done_set";           // ids concluídos
-    private static final String PREF_REMINDERS = "reminders_on";  // lembretes
+    private static final String PREF_REMINDERS = "reminders_on";  // alertas
+
+
+    // Inicializa a interface e os componentes principais.
+    // Carrega os dados dos exercícios e áudios, configura os RecyclerViews, filtros e preferências de alertas.
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_exercises);
-
-        // Bottom bar
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
         attachBottomNav(bottomNav);
-
-        // Ligações UI
         tvPercent = findViewById(R.id.tvPercent);
         tvProgressoSub = findViewById(R.id.tvProgressoSub);
         chipGroup = findViewById(R.id.chips);
-        switchLembretes = findViewById(R.id.switchLembretes);
+        switchAlertas = findViewById(R.id.switchAlertas);
         rvExercicios = findViewById(R.id.rvExercicios);
         rvAudios = findViewById(R.id.rvAudios);
-
-        // Listas / Adapters
         setupData();            // carrega exercícios (e marca concluídos a partir de prefs)
         setupRecyclerViews();   // configura recyclers e adapters
         setupChipsFiltering();  // filtra por categorias via chips
         setupAudios();          // carrega lista de áudios
         setupReminders();       // liga o switch aos prefs
-
-        // Atualiza progressos (percentagem e fração) de acordo com o filtro atual
         applyFilterAndUpdateProgress();
     }
 
-    /* ----------------------- Dados base ----------------------- */
+    // ============================================================
+    // Secção: Dados Base
+    // ============================================================
+
+    // Carrega a lista de exercícios locais, divididos por categorias.
+    // Marca os exercícios concluídos com base nas SharedPreferenc
 
     private void setupData() {
         // Repôr concluídos do storage
@@ -109,6 +101,7 @@ public class ExercisesActivity extends BaseBottomNavActivity {
         shownExercicios.addAll(allExercicios);
     }
 
+    // Carrega a lista de áudios de relaxamento disponíveis em res/raw.
     private void setupAudios() {
         // Áudios
         audios.add(new AudioRelax("Respiração calma", R.raw.breath_calm));
@@ -117,7 +110,13 @@ public class ExercisesActivity extends BaseBottomNavActivity {
         audioAdapter.notifyDataSetChanged();
     }
 
-    /* ----------------------- RecyclerViews ------------------------- */
+    // ============================================================
+    // Secção: setupRecycler Views
+    // ============================================================
+
+    // Configura os RecyclerViews:
+    // - Grelha de 2 colunas para exercícios com checkboxes.
+    // - Lista horizontal para áudios com botões de reprodução.
 
     private void setupRecyclerViews() {
         // Grelha 2 colunas para exercícios
@@ -143,13 +142,16 @@ public class ExercisesActivity extends BaseBottomNavActivity {
         rvAudios.setAdapter(audioAdapter);
     }
 
-    /* --------------------------- Chips (filtro) ----------------------------- */
+    // ============================================================
+    // Secção: Filtros
+    // ============================================================
 
+    // Liga os chips de categorias ao sistema de filtragem de exercícios.
     private void setupChipsFiltering() {
         chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> applyFilterAndUpdateProgress());
     }
 
-    // Aplica filtro pelas categorias ativas e recalcula progresso
+    // Aplica o filtro de categorias selecionadas e atualiza o progresso dos exercícios concluídos.
     private void applyFilterAndUpdateProgress() {
         Set<String> active = new HashSet<>();
         for (int i = 0; i < chipGroup.getChildCount(); i++) {
@@ -181,9 +183,11 @@ public class ExercisesActivity extends BaseBottomNavActivity {
         updateProgress();
     }
 
-    /* ----------------------- Progresso/Alertas ------------------- */
+    // ============================================================
+    // Secção: Progresso/Alertas
+    // ============================================================
 
-    // Atualiza percentagem e fração dos exercícios visíveis
+    // Calcula e exibe a percentagem de exercícios concluídos com base nos exercícios visíveis.
     private void updateProgress() {
         int total = shownExercicios.size();
         int done = 0;
@@ -194,24 +198,30 @@ public class ExercisesActivity extends BaseBottomNavActivity {
         tvPercent.setText(percent + "%");
     }
 
-    // Guarda preferências do Aviso
+    // Liga o switch de Alertas às SharedPreferences para ativar/desativar alertas
     private void setupReminders() {
         boolean enabled = getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(PREF_REMINDERS, true);
-        switchLembretes.setChecked(enabled);
-        switchLembretes.setOnCheckedChangeListener((button, isChecked) ->
+        switchAlertas.setChecked(enabled);
+        switchAlertas.setOnCheckedChangeListener((button, isChecked) ->
                 getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(PREF_REMINDERS, isChecked).apply()
         );
     }
-    // Persiste conjunto de exercícios concluídos
+    // Guarda o conjunto de exercícios marcados como concluídos nas SharedPreferences
     private void saveDoneSet() {
         HashSet<String> set = new HashSet<>();
         for (Exercicio e : allExercicios) if (e.done) set.add(e.id);
         getSharedPreferences(PREFS, MODE_PRIVATE).edit().putStringSet(PREF_DONE, set).apply();
     }
 
-    /* --------------------------- Áudio ----------------------------- */
+    // ============================================================
+    // Secção: Áudio
+    // ============================================================
 
-    // Toca/pára a faixa no índice 'position' e mantém o UI coerente
+    // Controla a reprodução de áudios de relaxamento:
+    // - Toca ou para o áudio selecionado.
+    // - Garante que apenas um áudio é reproduzido de cada vez.
+    // - Atualiza a interface conforme o estado da reprodução.
+
     private void handlePlay(int position) {
         AudioRelax a = audios.get(position);
 
@@ -264,6 +274,7 @@ public class ExercisesActivity extends BaseBottomNavActivity {
         }
     }
 
+    // Liberta os recursos do MediaPlayer ao sair da Activity
     @Override
     protected void onStop() {
         super.onStop();
@@ -282,12 +293,15 @@ public class ExercisesActivity extends BaseBottomNavActivity {
         if (mp != null) { mp.release(); mp = null; }
     }
 
+    // Indica que esta Activity corresponde ao item de exercícios na barra de navegação.
     @Override
     protected int currentNavItemId() { return R.id.nav_exercises; }
 
-    /* ======================= MODELOS/ADAPTERS ======================= */
+    // ============================================================
+    // Secção: Modelos e Adapters
+    // ============================================================
 
-    // Modelo de exercício
+    // Modelo de dados para representar um exercício com título, descrição, categoria, estado de conclusão e ID.
     private static class Exercicio {
         final String titulo, info, categoria, id;
         boolean done;
@@ -296,14 +310,17 @@ public class ExercisesActivity extends BaseBottomNavActivity {
         }
     }
 
-    // Modelo de áudio (título e referência ao ficheiro em res/raw)
+    // Modelo de dados para representar um áudio de relaxamento com título e referência ao ficheiro de áudio.
     private static class AudioRelax {
         final String titulo;
         final int resId; // res/raw
         AudioRelax(String t, int r) { this.titulo = t; this.resId = r; }
     }
 
-    // Adapter dos exercícios (item_exercicio.xml)
+
+    // Adapter para o RecyclerView de exercícios.
+    // Permite marcar exercícios como concluídos e atualiza o progresso.
+
     private static class ExercicioAdapter extends RecyclerView.Adapter<ExercicioAdapter.VH> {
         interface OnCheckChanged { void onToggle(@NonNull Exercicio ex, boolean checked); }
         private final List<Exercicio> data;
@@ -347,7 +364,13 @@ public class ExercisesActivity extends BaseBottomNavActivity {
         @Override public int getItemCount() { return data.size(); }
     }
 
-    // Adapter dos áudios (item_audio.xml)
+    // ============================================================
+    // Secção: Adapter de Áudio
+    // ============================================================
+
+    // Adapter para o RecyclerView de áudios de relaxamento.
+    // Permite tocar ou parar áudios e atualiza o botão conforme o estado de reprodução.
+
     private static class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.VH> {
         interface OnAudioAction { void onPlayClick(int position); }
         private final List<AudioRelax> data;

@@ -28,6 +28,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 
+// Classe responsável por gerir o ecrã do diário e reflexões do utilizador.
+// Permite escrever, visualizar, exportar e sincronizar entradas do diário e reflexões com Firebase.
 public class DiaryActivity extends BaseBottomNavActivity {
 
     private DatabaseReference reflectionsRef;
@@ -38,6 +40,9 @@ public class DiaryActivity extends BaseBottomNavActivity {
     private ActivityResultLauncher<Intent> editDiaryLauncher;
     private DatabaseReference diaryRef;
     private ChildEventListener diaryListener;
+
+    // Inicializa a interface, base de dados local e referências Firebase.
+    // Liga os botões da UI às ações: escrever, abrir calendário, exportar PDF, etc.
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -74,6 +79,8 @@ public class DiaryActivity extends BaseBottomNavActivity {
         findViewById(R.id.btnCalendarReflections).setOnClickListener(v -> openCalendarForReflections());
         findViewById(R.id.btnExportPdf).setOnClickListener(v -> showExportDialog());
     }
+
+    // Liga e desliga o listener do diário no Firebase para sincronização em tempo real.
     @Override protected void onStart() {
         super.onStart();
         attachDiaryListener();
@@ -87,7 +94,12 @@ public class DiaryActivity extends BaseBottomNavActivity {
         }
     }
 
-    /* -------------------- Diário: calendário LOCAL (SQLite) -------------------- */
+    // ============================================================
+    // Secção: Diário
+    // ============================================================
+
+    // Abre um calendário com os dias que têm entradas no diário local.
+    // Permite visualizar ou editar entradas existentes.
 
     private void openCalendarForDiary() {
         // Atualiza dias válidos (com texto) antes de abrir o calendário
@@ -146,7 +158,7 @@ public class DiaryActivity extends BaseBottomNavActivity {
         }
     }
 
-    // Recalcula o conjunto de dias do último ano com texto no diário local
+    // Atualiza a lista de dias com entradas no diário local (últimos 365 dias).
     private void refreshLocalDays() {
         daysWithEntry.clear();
         List<sqlite.DiaryEntry> lastYear = db.getDiaryLastNDays(365);
@@ -157,7 +169,12 @@ public class DiaryActivity extends BaseBottomNavActivity {
         }
     }
 
-    /* -------------------- Reflexões: calendário (Firebase + local) -------------------- */
+    // ============================================================
+    // Secção: Reflexões
+    // ============================================================
+
+    // Abre um calendário com os dias que têm reflexões (locais).
+    // Mostra as reflexões do dia selecionado.
 
     private void openCalendarForReflections() {
         // Dias com reflexões
@@ -215,8 +232,11 @@ public class DiaryActivity extends BaseBottomNavActivity {
         }
     }
 
-    /* -------------------- Exportar PDF (diário local + reflexões) -------------------- */
+    // ============================================================
+    // Secção: Exportar PDF
+    // ============================================================
 
+    // Mostra opções para exportar o diário e reflexões para PDF (tudo ou intervalo de datas).
     private void showExportDialog() {
         String[] options = {"Todas as entradas", "Entre datas"};
         new MaterialAlertDialogBuilder(this)
@@ -231,7 +251,7 @@ public class DiaryActivity extends BaseBottomNavActivity {
                 .show();
     }
 
-    // Pede intervalo de datas (início/fim) com dois DatePickers e lança export
+    // Permite ao utilizador escolher um intervalo de datas para exportar o diário
     private void pickDateRangeAndExport() {
         final Calendar cal = Calendar.getInstance();
         new DatePickerDialog(this, (view, y, m, day) -> {
@@ -247,11 +267,10 @@ public class DiaryActivity extends BaseBottomNavActivity {
         }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show();
     }
 
-    /**
-     * Exporta PDF com:
-     * - Diário
-     * - Reflexões
-     */
+
+    // Junta dados locais e do Firebase (diário e reflexões).
+    // Gera um ficheiro PDF com as entradas e abre/partilha o documento.
+
     private void exportPdf(boolean all, long fromMs, long toMs) {
         // 1) Reflexões LOCAIS → mapeia por dia
         Map<String, String> reflTextLocal = new HashMap<>();
@@ -439,8 +458,6 @@ public class DiaryActivity extends BaseBottomNavActivity {
                     }
                 }
             }
-
-
             @Override
             public void onChildAdded(@NonNull DataSnapshot snapshot, String previousChildName) {
                 upsertDay(snapshot);
@@ -464,7 +481,11 @@ public class DiaryActivity extends BaseBottomNavActivity {
         reflectionsRef.orderByKey().limitToLast(365).addChildEventListener(reflectionsListener);
     }
 
-    /* -------------------- PDF helpers -------------------- */
+    // ============================================================
+    // Secção: PDF Helpers
+    // ============================================================
+
+    // Cria o documento PDF com as entradas do diário e reflexões formatadas.
     private void createPdf(File file, SortedSet<String> dates,
                            Map<String,String> diaryText, Map<String,String> reflText) throws Exception {
 
@@ -554,7 +575,11 @@ public class DiaryActivity extends BaseBottomNavActivity {
         doc.close();
     }
 
-    // Desenha parágrafos (quebra linhas + espaçamento)
+    // ============================================================
+    // Secção: Helpers
+    // ============================================================
+
+    // Helpers para desenhar texto formatado no PDF, com quebras de linha e margens.
     private int drawParagraph(Canvas canvas, Paint paint, String text, int x, int y, int maxWidth, int lineH) {
         if (text == null || text.trim().isEmpty()) return y;
         String[] paragraphs = text.split("\\n");
@@ -564,8 +589,6 @@ public class DiaryActivity extends BaseBottomNavActivity {
         }
         return y;
     }
-
-    // Quebra de linha simples por palavras, respeitando largura máxima
     private int drawWrapped(Canvas canvas, Paint paint, String text, int x, int y, int maxWidth, int lineH) {
         if (text == null) return y;
         String[] words = text.trim().isEmpty() ? new String[0] : text.split("\\s+");
@@ -587,14 +610,17 @@ public class DiaryActivity extends BaseBottomNavActivity {
         return y;
     }
 
-    /* -------------------- Misc -------------------- */
+    // ============================================================
+    // Secção: Misc
+    // ============================================================
 
     @Override
     protected int currentNavItemId() {
         return R.id.nav_diary;
     }
 
-    // Permite verificar se a data é valida,ou seja,se estiver algo escrtito fica marcado caso não tenha fica inacessivel
+    // Valida as datas para o calendário (MaterialDatePicker).
+    // Permite selecionar apenas os dias com conteúdo.
 
     public static class AllowedDaysValidator implements CalendarConstraints.DateValidator, Parcelable {
         private final HashSet<String> allowedDateIds; // "yyyy-MM-dd"
@@ -618,7 +644,9 @@ public class DiaryActivity extends BaseBottomNavActivity {
         };
     }
 
-    // Helpers de datas
+    // ============================================================
+    // Secção: Funções Auxiliares
+    // ============================================================
     private String dateIdFromMillis(long ms) {
         return new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date(ms));
     }

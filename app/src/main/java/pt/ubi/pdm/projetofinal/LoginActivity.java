@@ -19,16 +19,13 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
 
-
-    //
-    //Activity responsável pelo ecrã de login da aplicação.
-    //Funcionalidades:
-        //- Login com email e palavra-passe usando Firebase Authentication.
-        //- Login com conta Google (Google Sign-In + Firebase).
-        //- Redireciona automaticamente para a MainActivity se o utilizador já estiver registado.
-        //- Guarda o nome do utilizador nas SharedPreferences para uso posterior na aplicação.
-        //- Valida os dados de entrada (email e password) antes de autenticar.
-
+// Classe responsável pelo ecrã de login da aplicação.
+// Funcionalidades:
+// - Login com email e palavra-passe usando Firebase Authentication.
+// - Login com conta Google (Google Sign-In + Firebase).
+// - Redireciona automaticamente para a MainActivity se o utilizador já estiver registado.
+// - Guarda o nome do utilizador nas SharedPreferences para uso posterior na aplicação.
+// - Valida os dados de entrada (email e password) antes de autenticar.
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -38,6 +35,11 @@ public class LoginActivity extends AppCompatActivity {
     private GoogleSignInClient googleClient;
 
     private TextInputEditText etEmail, etPass;
+
+
+    // Inicia a interface e os componentes da UI.
+    // Configura os botões de login por email, login com Google e navegação para o registo.
+    // Inicia o cliente de autenticação do Google.
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -64,6 +66,10 @@ public class LoginActivity extends AppCompatActivity {
         googleClient = GoogleSignIn.getClient(this, gso);
     }
 
+
+    // Verifica se o utilizador já está autenticado.
+    // Se sim, guarda o nome nas SharedPreferences e redireciona para a MainActivity
+
     @Override
     protected void onStart() {
         super.onStart();
@@ -83,7 +89,14 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
-    // -------- Email/Password --------
+    // ============================================================
+    // Secção: Email e Password
+    // ============================================================
+
+    // Valida o email e a palavra-passe inseridos.
+    // Se válidos, tenta autenticar com Firebase.
+    // Em caso de sucesso, guarda o nome e redireciona para a MainActivity.
+
     private void doEmailLogin() {
         String email = String.valueOf(etEmail.getText()).trim();
         String pass  = String.valueOf(etPass.getText());
@@ -126,7 +139,14 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
-    // -------- Google Sign-In + Firebase --------
+    // ============================================================
+    // Secção: Google SigIn e Firebase
+    // ============================================================
+
+    // Inicia o processo de login com conta Google.
+    // Após autenticação, obtém o nome do utilizador e guarda-o nas SharedPreferences.
+    // Redireciona para a MainActivity.
+
     private void startGoogleLogin() {
         Intent signInIntent = googleClient.getSignInIntent();
         startActivityForResult(signInIntent, RC_GOOGLE);
@@ -174,11 +194,18 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
-    // -------- Util --------
+    // ============================================================
+    // Secção: Utils
+    // ============================================================
+    // Abre a MainActivity e termina a LoginActivity.
     private void goHome() {
         startActivity(new Intent(this, MainActivity.class));
         finish();
     }
+
+
+    // Gera um nome de utilizador com base no email, removendo símbolos e números.
+    // Utilizado como fallback caso o nome não esteja disponível no Firebase.
 
     private String extractNameFallback(String email) {
         if (email == null) return "Utilizador";
