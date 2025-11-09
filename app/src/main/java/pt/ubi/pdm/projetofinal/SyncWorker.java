@@ -1,21 +1,21 @@
 package pt.ubi.pdm.projetofinal;
 
 import android.content.Context;
-
 import androidx.annotation.NonNull;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
-
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.FirebaseDatabase;
-
 import org.json.JSONObject;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
+
+// Classe responsável por executar a sincronização de dados locais com o Firebase.
+// Utiliza WorkManager para processar operações pendentes da base de dados local SQLITE.
 public class SyncWorker extends Worker {
 
     private sqlite db;
@@ -24,6 +24,15 @@ public class SyncWorker extends Worker {
         super(context, params);
         db = new sqlite(context.getApplicationContext());
     }
+
+
+
+    // Método principal chamado pelo WorkManager.
+    // - Verifica se o utilizador está autenticado.
+    // - Obtém até 20 operações pendentes da base de dados local.
+    // - Executa cada operação (diário, humor ou reflexão) conforme o tipo.
+    // - Marca como enviada ou falhada dependendo do resultado.
+    // - Retorna sucesso ou retry conforme o estado da sincronização.
 
     @NonNull
     @Override
@@ -73,6 +82,10 @@ public class SyncWorker extends Worker {
         }
     }
 
+
+    // Envia uma entrada de diário para o Firebase Realtime Database.
+    // - Extrai os dados do JSON e envia para o nó /users/{uid}/diary/{dateId}.
+
     private boolean upsertDiary(FirebaseDatabase rtdb, String uid, String payloadJson) {
         try {
             JSONObject j = new JSONObject(payloadJson);
@@ -94,6 +107,10 @@ public class SyncWorker extends Worker {
             return false;
         }
     }
+
+
+    // Envia um registo de humor para o Firebase Realtime Database.
+    // - Extrai os dados do JSON e envia para o nó /users/{uid}/moods/{dateId}.
 
     private boolean upsertMood(FirebaseDatabase rtdb, String uid, String payloadJson) {
         try {
@@ -117,6 +134,8 @@ public class SyncWorker extends Worker {
         }
     }
 
+    // Envia uma reflexão para o Firebase Realtime Database.
+    // - Extrai os dados do JSON e envia para o nó /users/{uid}/reflections/{dateId}/{autoId}.
     private boolean upsertReflection(FirebaseDatabase rtdb, String uid, String payloadJson) {
         try {
             JSONObject j = new JSONObject(payloadJson);

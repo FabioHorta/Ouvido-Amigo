@@ -4,17 +4,19 @@ import android.app.Application;
 import com.google.firebase.database.FirebaseDatabase;
 
 public class App extends Application {
+
     @Override
     public void onCreate() {
         super.onCreate();
-
-        // Ativa cache/persistência offline do Firebase Realtime Database.
+        // Ativa a persistência offline do Firebase Realtime Database
         try {
+            // Permite que os dados do Firebase sejam armazenados localmente e sincronizados quando houver ligação
             FirebaseDatabase.getInstance().setPersistenceEnabled(true);
         } catch (Exception ignored) {
-            // Se já tiver sido inicializado noutro local, ignoramos para não forçar a app a parar.
+            // Caso a persistência já tenha sido ativada anteriormente (o que causaria exceção), ignora o erro
         }
-        // Agenda a sincronização periódica da app (envio/receção de dados).
+
+        // Agenda a sincronização periódica da aplicação
         SyncScheduler.schedulePeriodic(this);
     }
 }

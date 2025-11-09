@@ -6,30 +6,25 @@ import android.view.View;
 import android.widget.CheckBox;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.materialswitch.MaterialSwitch;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-/**
- * Ecrã de Exercícios:
- * - Lista de exercícios (local) com categorias e progresso
- * - Secção de áudios de relaxamento (res/raw)
- * - Preferências simples (SharedPreferences) para concluídos e lembretes
- */
+ // Ecrã de Exercícios:
+ // - Lista de exercícios (local) com categorias e progresso
+ // - Secção de áudios de relaxamento (res/raw)
+ // - Preferências simples (SharedPreferences) para concluídos e lembretes
+
 public class ExercisesActivity extends BaseBottomNavActivity {
 
     // --- UI ---
@@ -85,11 +80,11 @@ public class ExercisesActivity extends BaseBottomNavActivity {
     /* ----------------------- Dados base ----------------------- */
 
     private void setupData() {
-        // Repôr concluídos do storage (atenção: o set devolvido não deve ser modificado)
+        // Repôr concluídos do storage
         Set<String> doneIds = getSharedPreferences(PREFS, MODE_PRIVATE)
                 .getStringSet(PREF_DONE, new HashSet<>());
 
-        // Exercícios (podes renomear/ajustar tempos/categorias)
+        // Exercícios
         // Categoria: Físico
         allExercicios.add(new Exercicio("Alongamentos matinais", "5–8 min · mobilidade", "Físico", doneIds.contains("ex_1"), "ex_1"));
         allExercicios.add(new Exercicio("Caminhada leve", "10–15 min · exterior", "Físico", doneIds.contains("ex_2"), "ex_2"));
@@ -115,7 +110,7 @@ public class ExercisesActivity extends BaseBottomNavActivity {
     }
 
     private void setupAudios() {
-        // Áudios embebidos (ficheiros em res/raw). Troca/ajusta à vontade.
+        // Áudios
         audios.add(new AudioRelax("Respiração calma", R.raw.breath_calm));
         audios.add(new AudioRelax("Body scan curto", R.raw.body_scan_short));
         audios.add(new AudioRelax("Som de chuva", R.raw.rain));
@@ -186,9 +181,9 @@ public class ExercisesActivity extends BaseBottomNavActivity {
         updateProgress();
     }
 
-    /* ----------------------- Progresso/Lembretes ------------------- */
+    /* ----------------------- Progresso/Alertas ------------------- */
 
-    // Atualiza percentagem e fração dos exercícios visíveis (respeita o filtro)
+    // Atualiza percentagem e fração dos exercícios visíveis
     private void updateProgress() {
         int total = shownExercicios.size();
         int done = 0;
@@ -199,7 +194,7 @@ public class ExercisesActivity extends BaseBottomNavActivity {
         tvPercent.setText(percent + "%");
     }
 
-    // Guarda preferências do lembrete (apenas a flag; o agendamento real pode ser feito noutro ponto)
+    // Guarda preferências do Aviso
     private void setupReminders() {
         boolean enabled = getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(PREF_REMINDERS, true);
         switchLembretes.setChecked(enabled);
@@ -207,8 +202,7 @@ public class ExercisesActivity extends BaseBottomNavActivity {
                 getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(PREF_REMINDERS, isChecked).apply()
         );
     }
-
-    // Persiste conjunto de exercícios concluídos (ids estáveis ex_1, ex_2, …)
+    // Persiste conjunto de exercícios concluídos
     private void saveDoneSet() {
         HashSet<String> set = new HashSet<>();
         for (Exercicio e : allExercicios) if (e.done) set.add(e.id);
@@ -261,7 +255,7 @@ public class ExercisesActivity extends BaseBottomNavActivity {
 
             mp.start();
 
-            // Atualizar anterior e atual (para o texto do botão refletir “Parar/Tocar”)
+            // Atualizar anterior e atual
             if (prev >= 0) audioAdapter.notifyItemChanged(prev);
             audioAdapter.notifyItemChanged(position);
 
@@ -285,7 +279,6 @@ public class ExercisesActivity extends BaseBottomNavActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // Defesa adicional (caso onStop não tenha corrido)
         if (mp != null) { mp.release(); mp = null; }
     }
 
@@ -345,7 +338,7 @@ public class ExercisesActivity extends BaseBottomNavActivity {
             h.cbConcluido.setChecked(ex.done);
 
             // Tocar no cartão alterna o checkbox (UX rápida)
-            ((MaterialCardView) h.itemView).setOnClickListener(v -> h.cbConcluido.toggle());
+            h.itemView.setOnClickListener(v -> h.cbConcluido.toggle());
 
             // Quando o utilizador muda o estado, notifica a Activity via callback
             h.cbConcluido.setOnCheckedChangeListener((buttonView, isChecked) -> cb.onToggle(ex, isChecked));

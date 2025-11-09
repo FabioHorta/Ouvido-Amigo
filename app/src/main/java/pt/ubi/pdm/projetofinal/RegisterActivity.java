@@ -1,24 +1,29 @@
 package pt.ubi.pdm.projetofinal;
 
 import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Patterns;
 import android.view.View;
 import android.widget.Toast;
-
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
-
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserProfileChangeRequest;
 
+
+// Classe responsável pelo registo de novos utilizadores na aplicação.
+// Permite criar conta com email e palavra-passe, valida os dados e define um nome de utilizador com base no email.
 
 public class RegisterActivity extends AppCompatActivity {
     private FirebaseAuth auth;
     private TextInputEditText etEmail, etPass, etPass2;
     private View btnRegister;
+
+
+    // Inicializa os componentes da interface e define os listeners para os botões:
+    // - Registar nova conta
+    // - Voltar para o ecrã de login
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,6 +40,9 @@ public class RegisterActivity extends AppCompatActivity {
         findViewById(R.id.backToLogin).setOnClickListener(v -> finish());
     }
 
+
+    // Gera um nome de utilizador com base no email fornecido, removendo símbolos e números.
+    // Utilizado como nome padrão caso o utilizador não forneça um nome explícito.
     private String extractNameFallback(String email) {
         if (email == null) return "Utilizador";
         String left = email.split("@")[0];
@@ -53,6 +61,12 @@ public class RegisterActivity extends AppCompatActivity {
         return sb.toString().trim();
     }
 
+
+    // Valida os dados introduzidos (email e palavras-passe).
+    // Se válidos, cria uma nova conta no Firebase Authentication.
+    // Define o nome do utilizador com base no email.
+    // Guarda o nome nas SharedPreferences.
+    // Redireciona para a MainActivity após registo bem-sucedido.
 
     private void createAccount() {
         String email = String.valueOf(etEmail.getText()).trim();
@@ -83,11 +97,10 @@ public class RegisterActivity extends AppCompatActivity {
 
                         Toast.makeText(this, "Conta criada!", Toast.LENGTH_SHORT).show();
 
-                        // 👉 vai direto para a Home e limpa o back stack
+                        //vai para a Home e limpa o back stack
                         Intent i = new Intent(RegisterActivity.this, MainActivity.class);
                         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                         startActivity(i);
-                        // opcional: finishAffinity();  // se preferires
                     } else {
                         Toast.makeText(this, "Erro: " + t.getException().getMessage(), Toast.LENGTH_LONG).show();
                     }

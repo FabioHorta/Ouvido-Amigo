@@ -10,9 +10,7 @@ import android.os.Bundle;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
-
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -20,23 +18,21 @@ import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
-
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.*;
-
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-/**
- * Ecrã principal da aplicação.
- * Mostra:
- *  - Saudação e frase motivacional
- *  - Humor diário e progresso semanal
- *  - Sugestões de bem-estar
- *  - Reflexões guiadas
- * Garante funcionamento offline (SQLite) e sincronização com Firebase.
- */
+    // Ecrã principal da aplicação.
+    // Funcionalidades:
+        // - Saudação personalizada e frase motivacional.
+        // - Registo e visualização do humor diário.
+        // - Sugestões de bem-estar com base no tempo de ecrã.
+        // - Reflexões guiadas com sincronização local/cloud.
+        // - Botões de emergência com chamadas rápidas.
+        // - Sincronização com Firebase e suporte offline via SQLite.
+
 public class MainActivity extends BaseBottomNavActivity {
 
     // Frases motivacionais diárias
@@ -61,11 +57,26 @@ public class MainActivity extends BaseBottomNavActivity {
     private sqlite db;
     private String todayId;
     private Boolean lastConnectionStatus = true;
-    private int currentSuggestion = -1; 
+    private int currentSuggestion = -1;
+    private FirebaseUser user;
+    private DatabaseReference moodsRef;
+    private ChildEventListener moodsChildListener;
+    private final TreeMap<String,Integer> cloudMoods = new TreeMap<>();
+    private boolean suppressMoodSave = false;
+    private boolean isOnline = false;
+    private DatabaseReference reflectionsRef;
+
 
     // ============================================================
     // Ciclo de vida
     // ============================================================
+
+    // Método chamado ao iniciar a Activity.
+    //  - Configura a UI, base de dados local e componentes Firebase.
+    //  - Liga listeners para sincronização de humor e reflexões.
+    //  - Mostra saudação e frase motivacional.
+    //  Inicia sugestões de bem-estar e monitorização da ligação à internet.
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -76,18 +87,55 @@ public class MainActivity extends BaseBottomNavActivity {
         setupUI();
         setupDatabase();
 
+        // =====================  init Firebase (mood) =====================
+        user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            moodsRef = FirebaseDatabase.getInstance()
+                    .getReference("users")
+                    .child(user.getUid())
+                    .child("moods");
+            moodsRef.keepSynced(true);
+        }
+        // =====================  init Firebase (Reflections) =====================
+        if (user != null) {
+            reflectionsRef = FirebaseDatabase.getInstance()
+                    .getReference("users")
+                    .child(user.getUid())
+                    .child("reflections");
+            reflectionsRef.keepSynced(true);
+        }
+
         setupDailyMoodLocal();
         renderLast7DaysProgress();
         setupWellnessSuggestion();
         monitorFirebaseConnection();
     }
 
+    // ===================== Ligar/Desligar listener cloud =====================
+    @Override
+    protected void onStart() {
+        super.onStart();
+        attachMoodChildListener();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (moodsChildListener != null && moodsRef != null) {
+            moodsRef.removeEventListener(moodsChildListener);
+            moodsChildListener = null;
+        }
+    }
+    // ===============================================================================
+
     @Override
     protected void onResume() {
         super.onResume();
         refreshProfileHeader();
         refreshWellness();
-        renderLast7DaysProgress();
+
+        // =====================Render cloud-first =====================
+        renderProgressCloudFirst(); // tenta cloud; se não houver usa SQLite
     }
 
     @Override
@@ -98,6 +146,13 @@ public class MainActivity extends BaseBottomNavActivity {
     // ============================================================
     // Configuração inicial
     // ============================================================
+
+     // Inicializa os elementos visuais da interface:
+     // - Saudação com nome do utilizador.
+     // - Frase motivacional aleatória.
+     // - Botão de perfil e botão para abrir o diário/reflexão.
+
+
     private void setupBottomBar() {
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
         attachBottomNav(bottomNav);
@@ -136,12 +191,17 @@ public class MainActivity extends BaseBottomNavActivity {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot s) {
                         Boolean ok = s.getValue(Boolean.class);
+                        if (ok != null) isOnline = ok; //Atualiza flag online/offline
+
                         if (ok != null && !ok.equals(lastConnectionStatus)) {
                             Toast.makeText(MainActivity.this,
                                     ok ? "Ligação restabelecida ✅"
                                             : "Sem ligação • a trabalhar offline",
                                     Toast.LENGTH_SHORT).show();
                             lastConnectionStatus = ok;
+
+                            // sempre que muda, tenta render cloud-first
+                            renderProgressCloudFirst();
                         }
                     }
 
@@ -153,6 +213,12 @@ public class MainActivity extends BaseBottomNavActivity {
     // ============================================================
     // Secção: Botões de emergência
     // ============================================================
+
+    //Configura os botões de emergência
+    // - Ligações rápidas para 112, SNS24 e Voz Amiga.
+    // - Suporte para clique longo (cópia do número para a área de transferência).
+    // - Mostra diálogo para escolher número da Voz Amiga.
+
     private void setupEmergencyButtons() {
         setupEmergencyButton(R.id.btnCall112, "112", "Emergência 112");
         setupEmergencyButton(R.id.btnCallSNS24, "808242424", "SNS 24");
@@ -209,13 +275,23 @@ public class MainActivity extends BaseBottomNavActivity {
     // ============================================================
     // Secção: Humor diário
     // ============================================================
+
+     // Permite ao utilizador registar o humor do dia:
+     // - Se offline, carrega o humor localmente.
+     // - Ao selecionar um humor, guarda localmente e sincroniza com Firebase (se online).
+     // - Se offline, adiciona à fila de sincronização.
     private void setupDailyMoodLocal() {
-        sqlite.MoodLog today = db.getMoodByDate(todayId);
-        if (today != null && today.mood >= 1 && today.mood <= 5)
-            moodGroup.check(new int[]{R.id.mood1, R.id.mood2, R.id.mood3, R.id.mood4, R.id.mood5}[today.mood - 1]);
+        // Se estiver offline, mostra seleção local para hoje.
+        if (!isOnline) {
+            sqlite.MoodLog today = db.getMoodByDate(todayId);
+            if (today != null && today.mood >= 1 && today.mood <= 5)
+                moodGroup.check(new int[]{R.id.mood1, R.id.mood2, R.id.mood3, R.id.mood4, R.id.mood5}[today.mood - 1]);
+        }
 
         moodGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
             if (!isChecked) return;
+
+            if (suppressMoodSave) return;
 
             int mood = checkedId == R.id.mood1 ? 1 :
                     checkedId == R.id.mood2 ? 2 :
@@ -223,18 +299,35 @@ public class MainActivity extends BaseBottomNavActivity {
                                     checkedId == R.id.mood4 ? 4 : 5;
 
             long now = System.currentTimeMillis();
-            db.upsertMood(todayId, mood, now);
 
-            String payload = "{\"dateId\":\"" + todayId + "\"," +
-                    "\"mood\":" + mood + "," +
-                    "\"createdAt\":" + now + "}";
-            db.enqueue("UPSERT_MOOD", todayId, payload, now);
+            // ===================== Cloud-first =====================
+            if (isOnline && user != null && moodsRef != null) {
+                Map<String, Object> m = new HashMap<>();
+                m.put("value", mood);
+                m.put("at", ServerValue.TIMESTAMP);
+                moodsRef.child(todayId).setValue(m);
+
+                db.upsertMood(todayId, mood, now);
+            } else {
+                // offline: só local + fila
+                db.upsertMood(todayId, mood, now);
+
+                String payload = "{\"dateId\":\"" + todayId + "\"," +
+                        "\"mood\":" + mood + "," +
+                        "\"createdAt\":" + now + "}";
+                db.enqueue("UPSERT_MOOD", todayId, payload, now);
+            }
+            // ===============================================================
 
             Toast.makeText(this, "Humor guardado ✅", Toast.LENGTH_SHORT).show();
-            renderLast7DaysProgress();
+            renderProgressCloudFirst();
         });
     }
 
+     // Mostra os últimos 7 dias de humor:
+         // - Usa emojis para representar o humor diário.
+         // - Calcula a média e mostra em percentagem.
+         // - Usa dados locais (SQLite).
     private void renderLast7DaysProgress() {
         List<sqlite.MoodLog> last = db.getMoodLastNDays(7);
         StringBuilder line = new StringBuilder("Últimos 7 dias: ");
@@ -266,9 +359,143 @@ public class MainActivity extends BaseBottomNavActivity {
         }
     }
 
+    // ===================== Listener cloud (tempo-real) =====================
+     // Liga um listener ao nó de humor no Firebase:
+     // - Escuta alterações em tempo real (últimos 14 dias).
+     // - Atualiza cache local e interface.
+     // - Se o humor de hoje mudar, atualiza o botão selecionado.
+    private void attachMoodChildListener() {
+        if (user == null || moodsRef == null || moodsChildListener != null) return;
+
+        Query q = moodsRef.orderByKey().limitToLast(14);
+
+        moodsChildListener = new ChildEventListener() {
+            private void upsertFromCloud(String dateId, Integer value, Long at) {
+                if (dateId == null || value == null) return;
+
+                // 1) cache cloud
+                cloudMoods.put(dateId, value);
+
+                // 2) espelho local (para offline)
+                long when = (at != null ? at : System.currentTimeMillis());
+                db.upsertMood(dateId, value, when);
+
+                // 3) se for hoje, refletir no toggle
+                if (dateId.equals(todayId) && value >= 1 && value <= 5) {
+                    int[] ids = {R.id.mood1, R.id.mood2, R.id.mood3, R.id.mood4, R.id.mood5};
+                    int target = ids[value - 1];
+                    if (moodGroup.getCheckedButtonId() != target) {
+                        suppressMoodSave = true;
+                        moodGroup.check(target);
+                        moodGroup.postDelayed(() -> suppressMoodSave = false, 120);
+                    }
+                }
+
+                renderProgressCloudFirst();
+            }
+
+            @Override public void onChildAdded(@NonNull DataSnapshot d, String prev) {
+                upsertFromCloud(d.getKey(),
+                        d.child("value").getValue(Integer.class),
+                        d.child("at").getValue(Long.class));
+            }
+
+            @Override public void onChildChanged(@NonNull DataSnapshot d, String prev) {
+                upsertFromCloud(d.getKey(),
+                        d.child("value").getValue(Integer.class),
+                        d.child("at").getValue(Long.class));
+            }
+
+            @Override public void onChildRemoved(@NonNull DataSnapshot d) {
+                String k = d.getKey();
+                if (k != null) cloudMoods.remove(k);
+                renderProgressCloudFirst();
+            }
+            @Override
+            public void onChildMoved(@NonNull DataSnapshot d, String prev) {}
+            @Override
+            public void onCancelled(@NonNull DatabaseError e) {}
+        };
+
+        q.addChildEventListener(moodsChildListener);
+    }
+    // ==============================================================================
+
+    // =====================Render cloud-first (fallback SQLite) =====================
+         // Mostra o progresso dos últimos 7 dias:
+             // - Se online e com dados da cloud, usa Firebase.
+             // - Caso contrário, recorre à base de dados local.
+             // - Garante que o humor de hoje está refletido na UI.
+    private void renderProgressCloudFirst() {
+        // Se online e houver dados cloud, usa cloud
+        if (isOnline && !cloudMoods.isEmpty()) {
+            List<Integer> vals = new ArrayList<>();
+            // últimos 7 por ordem decrescente de data
+            NavigableMap<String,Integer> desc = cloudMoods.descendingMap();
+            int c = 0;
+            for (Map.Entry<String,Integer> e : desc.entrySet()) {
+                vals.add(e.getValue());
+                if (++c == 7) break;
+            }
+            renderFromValues(vals);
+
+            // garante toggle de hoje
+            Integer todayCloud = cloudMoods.get(todayId);
+            if (todayCloud != null && todayCloud >= 1 && todayCloud <= 5) {
+                int[] ids = {R.id.mood1, R.id.mood2, R.id.mood3, R.id.mood4, R.id.mood5};
+                if (moodGroup.getCheckedButtonId() != ids[todayCloud - 1]) {
+                    suppressMoodSave = true;
+                    moodGroup.check(ids[todayCloud - 1]);
+                    moodGroup.postDelayed(() -> suppressMoodSave = false, 120);
+                }
+            }
+            return;
+        }
+
+        // Caso contrário, usa SQLite
+        renderLast7DaysProgress();
+        if (!isOnline) {
+            sqlite.MoodLog today = db.getMoodByDate(todayId);
+            if (today != null && today.mood >= 1 && today.mood <= 5) {
+                int[] ids = {R.id.mood1, R.id.mood2, R.id.mood3, R.id.mood4, R.id.mood5};
+                if (moodGroup.getCheckedButtonId() != ids[today.mood - 1]) {
+                    suppressMoodSave = true;
+                    moodGroup.check(ids[today.mood - 1]);
+                    moodGroup.postDelayed(() -> suppressMoodSave = false, 120);
+                }
+            }
+        }
+    }
+
+    private void renderFromValues(List<Integer> vals) {
+        StringBuilder line = new StringBuilder("Últimos 7 dias: ");
+        int sum = 0, count = 0;
+
+        for (int i = 0; i < 7; i++) {
+            if (i < vals.size()) {
+                int m = vals.get(i);
+                line.append(emojiFor(m)).append(' ');
+                sum += m; count++;
+            } else line.append("— ");
+        }
+
+        tvProgressEmojis.setText(line.toString().trim());
+        int percent = count > 0 ? (int) Math.round(((sum / (double) count - 1) / 4) * 100) : 0;
+        progressMood.setProgress(percent);
+        tvProgressAvg.setText("Média: " + percent + "%");
+    }
+    // =========================================================================================
+
     // ============================================================
     // Secção: Reflexão guiada
     // ============================================================
+
+     // Mostra um diálogo para o utilizador escrever uma reflexão:
+         // - Limita a 50 palavras.
+         // - Valida em tempo real.
+         // - Guarda localmente e tenta sincronizar com Firebase.
+         // - Se offline, adiciona à fila de sincronização.
+
     private void showReflectionPopup() {
         TextInputLayout til = new TextInputLayout(this);
         til.setHint("Escreve a tua reflexão (máx. 50 palavras)");
@@ -333,13 +560,39 @@ public class MainActivity extends BaseBottomNavActivity {
         String dateId = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
         long now = System.currentTimeMillis();
 
+        // guarda SEMPRE local (histórico + offline)
         db.insertReflection(dateId, text, now);
-        String payload = "{\"dateId\":\"" + dateId + "\"," +
-                "\"text\":" + quoteJson(text) + "," +
-                "\"createdAt\":" + now + "}";
-        db.enqueue("UPSERT_REFLECTION", dateId, payload, now);
 
-        Toast.makeText(this, "Reflexão guardada ✅", Toast.LENGTH_SHORT).show();
+        // cloud-first
+        if (reflectionsRef != null) {
+            String entryId = reflectionsRef.child(dateId).push().getKey();
+            if (entryId != null) {
+                Map<String, Object> payload = new HashMap<>();
+                payload.put("text", text);
+                payload.put("createdAt", ServerValue.TIMESTAMP);
+                payload.put("dateId", dateId);
+
+                reflectionsRef.child(dateId).child(entryId).setValue(payload)
+                        .addOnSuccessListener(x ->
+                                Toast.makeText(this, "Reflexão guardada na cloud ✅", Toast.LENGTH_SHORT).show()
+                        )
+                        .addOnFailureListener(e -> {
+                            String q = "{\"dateId\":\"" + dateId + "\","
+                                    + "\"text\":" + quoteJson(text) + ","
+                                    + "\"createdAt\":" + now + "}";
+                            db.enqueue("UPSERT_REFLECTION", dateId, q, now);
+                            Toast.makeText(this, "Sem ligação — guardado localmente (vai sincronizar)", Toast.LENGTH_SHORT).show();
+                        });
+            }
+        } else {
+            // sem auth/ligação: segue fila de sync
+            String q = "{\"dateId\":\"" + dateId + "\","
+                    + "\"text\":" + quoteJson(text) + ","
+                    + "\"createdAt\":" + now + "}";
+            db.enqueue("UPSERT_REFLECTION", dateId, q, now);
+            Toast.makeText(this, "Sem ligação — guardado localmente (vai sincronizar)", Toast.LENGTH_SHORT).show();
+        }
+
         SyncScheduler.kickNow(this);
     }
 
@@ -350,6 +603,12 @@ public class MainActivity extends BaseBottomNavActivity {
     // ============================================================
     // Secção: Sugestões de bem-estar
     // ============================================================
+
+     // Sugere atividades de bem-estar:
+     // - Se tempo de ecrã for elevado, sugere pausa.
+     // - Caso contrário, escolhe sugestão aleatória.
+     // - Ações incluem hidratar, alongar, caminhar, etc.
+
     private void setupWellnessSuggestion() {
         tvWellnessTitle.setText("Sugestão de bem-estar");
         refreshWellness();
@@ -407,8 +666,7 @@ public class MainActivity extends BaseBottomNavActivity {
 
         long screenMs = getTodayScreenTimeMillis();
         if (screenMs >= 4L * 60L * 60L * 1000L) {
-            tvWellnessBody.setText("Hoje já usaste cerca de " + formatDuration(screenMs) +
-                    " de ecrã. Faz uma pausa de 5–10 minutos para recuperar foco.");
+            tvWellnessBody.setText("Hoje já usaste cerca de " + formatDuration(screenMs) + " de ecrã. Faz uma pausa de 5–10 minutos para recuperar foco.");
             btnWellnessAction.setText("Fazer pausa");
             currentSuggestion = 10;
             return;
@@ -493,6 +751,14 @@ public class MainActivity extends BaseBottomNavActivity {
     // ============================================================
     // Secção: Firebase (perfil + sincronização)
     // ============================================================
+
+
+     // Atualiza o cabeçalho com nome e avatar do utilizador:
+     // - Usa dados locais (SharedPreferences).
+     // - Se disponível, atualiza com dados do Firebase (nome e imagem).
+     // - Guarda avatar localmente para uso offline.
+
+
     private void refreshProfileHeader() {
         TextView tvGreeting = findViewById(R.id.tvGreeting);
         ShapeableImageView btnProfile = findViewById(R.id.btnProfile);

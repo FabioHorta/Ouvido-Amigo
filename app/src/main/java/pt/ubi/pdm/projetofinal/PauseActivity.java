@@ -6,44 +6,64 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+// Activity que implementa uma pausa guiada com contagem decrescente.
+// - Mantém o ecrã ligado e entra em modo imersivo.
+// - Tenta ativar "Screen Pinning" para evitar distrações.
+// - Impede o botão de voltar.
+// - Permite saída de emergência com 3 toques no ecrã.
+
 public class PauseActivity extends AppCompatActivity {
-
     public static final String EXTRA_DURATION_MS = "duration_ms";
-    private CountDownTimer timer;
-    private long durationMs = 10 * 60 * 1000L; // default 10 min
-    private TextView tvCountdown, tvHint;
 
-    @Override protected void onCreate(@Nullable Bundle savedInstanceState) {
+    private CountDownTimer timer;
+    private long durationMs = 10 * 60 * 1000L; // Duração padrão: 10 minutos
+    private TextView tvCountdown, tvHint;
+    private int tapCount = 0; // Contador de toques para saída de emergência
+
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pause);
 
-        // Mantém ecrã ligado e esconde UI do sistema (imersivo)
+        // Mantém o ecrã ligado e ativa modo imersivo (oculta barra de navegação e status)
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         enterImmersiveMode();
 
+        // Inicializa componentes da UI
         tvCountdown = findViewById(R.id.tvCountdown);
-        tvHint      = findViewById(R.id.tvHint);
+        tvHint = findViewById(R.id.tvHint);
 
+        // Lê a duração da pausa passada por Intent
         long extra = getIntent().getLongExtra(EXTRA_DURATION_MS, durationMs);
         if (extra > 0) durationMs = extra;
 
-        // Tentar "Screen Pinning" (fixar app)
+        // Tenta ativar "Screen Pinning" para evitar que o utilizador saia da app
         try {
-            startLockTask(); // só funciona se o utilizador tiver activado "Fixação de ecrã" nas Definições
+            startLockTask();
             tvHint.setText("Pausa em progresso • App fixada. Prima Voltar e Recentes para sair após terminar.");
         } catch (Exception ignored) {
-            // Sem pinning, seguimos mesmo assim.
+            // Caso não seja possível ativar, apenas mostra aviso
             tvHint.setText("Pausa em progresso • Para evitar distrações, não saias desta página.");
         }
 
-        startCountdown();
-        // Tap triplo em 3s para sair antes do tempo (safety)
-        setupEmergencyExit();
+        startCountdown(); // Inicia a contagem decrescente
+        setupEmergencyExit(); // Configura saída de emergência
+
+        // Impede o botão físico de voltar
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                // Ignora o botão "Voltar"
+            }
+        });
     }
 
+    // Ativa o modo imersivo para ocultar a UI do sistema.
+    // Reativa automaticamente após mudanças de visibilidade.
     private void enterImmersiveMode() {
         final View decor = getWindow().getDecorView();
         decor.setSystemUiVisibility(
@@ -57,19 +77,30 @@ public class PauseActivity extends AppCompatActivity {
         decor.setOnSystemUiVisibilityChangeListener(v -> decor.postDelayed(this::enterImmersiveMode, 300));
     }
 
+    // Inicia a contagem decrescente com atualização a cada segundo.
+    // Ao terminar, mostra mensagem e fecha a Activity.
     private void startCountdown() {
         updateCountdownText(durationMs);
         timer = new CountDownTimer(durationMs, 1000L) {
-            @Override public void onTick(long ms) { updateCountdownText(ms); }
-            @Override public void onFinish() {
+            @Override
+            public void onTick(long ms) {
+                updateCountdownText(ms);
+            }
+
+            @Override
+            public void onFinish() {
                 updateCountdownText(0);
-                try { stopLockTask(); } catch (Exception ignored) {}
+                try {
+                    stopLockTask();
+                } catch (Exception ignored) {
+                }
                 Toast.makeText(PauseActivity.this, "Pausa concluída ✨", Toast.LENGTH_SHORT).show();
                 finish();
             }
         }.start();
     }
 
+    // Atualiza o texto do cronómetro no formato MM:SS.
     private void updateCountdownText(long ms) {
         long totalSec = ms / 1000L;
         long m = totalSec / 60L;
@@ -77,14 +108,18 @@ public class PauseActivity extends AppCompatActivity {
         tvCountdown.setText(String.format(java.util.Locale.getDefault(), "%02d:%02d", m, s));
     }
 
-    private int tapCount = 0;
+    // Permite sair da pausa com 3 toques rápidos no ecrã.
+    // Reinicia o contador de toques após 3 segundos.
     private void setupEmergencyExit() {
         View root = findViewById(R.id.pauseRoot);
         root.setOnClickListener(v -> {
             tapCount++;
             if (tapCount == 3) {
                 Toast.makeText(this, "Saída de emergência.", Toast.LENGTH_SHORT).show();
-                try { stopLockTask(); } catch (Exception ignored) {}
+                try {
+                    stopLockTask();
+                } catch (Exception ignored) {
+                }
                 finish();
             } else {
                 root.postDelayed(() -> tapCount = 0, 3000);
@@ -92,12 +127,14 @@ public class PauseActivity extends AppCompatActivity {
         });
     }
 
-    @Override public void onBackPressed() {
-    }
-
-    @Override protected void onDestroy() {
+    // Cancela o temporizador e desativa o "screen pinning" ao destruir a Activity.
+    @Override
+    protected void onDestroy() {
         super.onDestroy();
         if (timer != null) timer.cancel();
-        try { stopLockTask(); } catch (Exception ignored) {}
+        try {
+            stopLockTask();
+        } catch (Exception ignored) {
+        }
     }
 }

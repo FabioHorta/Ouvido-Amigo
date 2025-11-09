@@ -11,12 +11,10 @@ import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.widget.Toast;
-
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.core.content.FileProvider;
-
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.datepicker.CalendarConstraints;
 import com.google.android.material.datepicker.MaterialDatePicker;
@@ -24,7 +22,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.*;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
@@ -33,14 +30,14 @@ import java.util.*;
 
 public class DiaryActivity extends BaseBottomNavActivity {
 
-    // Referência às reflexões do utilizador no Firebase
     private DatabaseReference reflectionsRef;
     private FirebaseUser user;
-
+    private ChildEventListener reflectionsListener;
     private sqlite db;
     private final Set<String> daysWithEntry = new HashSet<>();
-
     private ActivityResultLauncher<Intent> editDiaryLauncher;
+    private DatabaseReference diaryRef;
+    private ChildEventListener diaryListener;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -48,20 +45,20 @@ public class DiaryActivity extends BaseBottomNavActivity {
 
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
         attachBottomNav(bottomNav);
-
-        // Autenticação
         user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) { finish(); return; }
 
-        // Nó de reflexões do utilizador
+        diaryRef = FirebaseDatabase.getInstance()
+                .getReference("users").child(user.getUid()).child("diary");
+        diaryRef.keepSynced(true);
+
         reflectionsRef = FirebaseDatabase.getInstance()
                 .getReference("users").child(user.getUid()).child("reflections");
+        reflectionsRef.keepSynced(true);
 
-        // Base de dados local (SQLite)
         db = new sqlite(this);
-        refreshLocalDays(); // pré-carrega dias do diário com conteúdo
-
-        // Resultado do editor de diário → se gravou, atualiza dias locais
+        refreshLocalDays();
+        attachReflectionsListener();
         editDiaryLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 res -> {
@@ -70,13 +67,24 @@ public class DiaryActivity extends BaseBottomNavActivity {
                     }
                 });
 
-        // Ações dos botões
         findViewById(R.id.btnWrite).setOnClickListener(v ->
                 editDiaryLauncher.launch(new Intent(this, WriteDiaryActivity.class))
         );
         findViewById(R.id.btnCalendarDiary).setOnClickListener(v -> openCalendarForDiary());
         findViewById(R.id.btnCalendarReflections).setOnClickListener(v -> openCalendarForReflections());
         findViewById(R.id.btnExportPdf).setOnClickListener(v -> showExportDialog());
+    }
+    @Override protected void onStart() {
+        super.onStart();
+        attachDiaryListener();
+    }
+
+    @Override protected void onStop() {
+        super.onStop();
+        if (diaryListener != null && diaryRef != null) {
+            diaryRef.removeEventListener(diaryListener);
+            diaryListener = null;
+        }
     }
 
     /* -------------------- Diário: calendário LOCAL (SQLite) -------------------- */
@@ -134,7 +142,7 @@ public class DiaryActivity extends BaseBottomNavActivity {
         dp.show(getSupportFragmentManager(), "dp_diary");
 
         if (!daysWithEntry.isEmpty()) {
-            Toast.makeText(this, "Dias com conteúdo estão ativos; restantes ficam cinzentos.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Dias com conteúdo estão ativos; os restantes ficam cinzentos.", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -152,7 +160,7 @@ public class DiaryActivity extends BaseBottomNavActivity {
     /* -------------------- Reflexões: calendário (Firebase + local) -------------------- */
 
     private void openCalendarForReflections() {
-        // Dias com reflexões (partimos dos dados locais; o utilizador pode estar offline)
+        // Dias com reflexões
         HashSet<String> daysWithReflections = new HashSet<>(db.getReflectionDaysLastNDays(365));
 
         MaterialDatePicker<Long> dp;
@@ -170,7 +178,7 @@ public class DiaryActivity extends BaseBottomNavActivity {
                     .build();
         }
 
-        // Mostra a lista de reflexões locais do dia; (Firebase complementa no export PDF)
+        // Mostra a lista de reflexões locais do dia
         dp.addOnPositiveButtonClickListener(ms -> {
             String dateId = dateIdFromMillis(ms);
             List<sqlite.Reflection> list = db.getReflectionsByDate(dateId);
@@ -184,9 +192,13 @@ public class DiaryActivity extends BaseBottomNavActivity {
             }
 
             StringBuilder sb = new StringBuilder();
+            java.util.LinkedHashSet<String> seen = new java.util.LinkedHashSet<>();
             for (sqlite.Reflection r : list) {
+                if (r.text == null) continue;
+                String t = r.text.trim();
+                if (t.isEmpty() || !seen.add(t)) continue; // ignora repetidos
                 if (sb.length() > 0) sb.append("\n\n");
-                sb.append("• ").append(r.text);
+                sb.append("• ").append(t);
             }
 
             new MaterialAlertDialogBuilder(DiaryActivity.this)
@@ -199,7 +211,7 @@ public class DiaryActivity extends BaseBottomNavActivity {
         dp.show(getSupportFragmentManager(), "dp_reflections");
 
         if (!daysWithReflections.isEmpty()) {
-            Toast.makeText(this, "Dias com reflexões estão ativos; restantes ficam cinzentos.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Dias com reflexões estão ativos;os restantes ficam cinzentos.", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -241,9 +253,9 @@ public class DiaryActivity extends BaseBottomNavActivity {
      * - Reflexões
      */
     private void exportPdf(boolean all, long fromMs, long toMs) {
-        // 1) Reflexões LOCAIS → mapear por dia (ex.: últimos ~10 anos)
+        // 1) Reflexões LOCAIS → mapeia por dia
         Map<String, String> reflTextLocal = new HashMap<>();
-        List<String> reflDays = db.getReflectionDaysLastNDays(3650);
+        List<String> reflDays = db.getReflectionDaysLastNDays(365);
         for (String day : reflDays) {
             List<sqlite.Reflection> list = db.getReflectionsByDate(day);
             if (!list.isEmpty()) {
@@ -256,7 +268,7 @@ public class DiaryActivity extends BaseBottomNavActivity {
             }
         }
 
-        // 2) Pede reflexões REMOTAS (Firebase), junta com as LOCAIS e só depois gera PDF
+        // 2) Pede reflexões REMOTAS (Firebase), junta com as LOCAIS e só depois gera o PDF
         reflectionsRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override public void onDataChange(@NonNull DataSnapshot reflSnap) {
                 // Começa com o que existe localmente; Firebase acrescenta/atualiza
@@ -274,14 +286,13 @@ public class DiaryActivity extends BaseBottomNavActivity {
                         }
                     }
                     if (sb.length() > 0) {
-                        // Remoto complementa/sobrepõe o local para este dia
                         reflText.put(dayKey, sb.toString());
                     }
                 }
 
-                // 3) Diário LOCAL → preencher Mapa (antes estava vazio)
+                // 3) Diário LOCAL
                 Map<String, String> diaryText = new HashMap<>();
-                List<sqlite.DiaryEntry> allDiary = db.getDiaryLastNDays(3650);
+                List<sqlite.DiaryEntry> allDiary = db.getDiaryLastNDays(365);
                 for (sqlite.DiaryEntry e : allDiary) {
                     if (e.text != null && !e.text.trim().isEmpty()) {
                         diaryText.put(e.dateId, e.text.trim());
@@ -334,13 +345,126 @@ public class DiaryActivity extends BaseBottomNavActivity {
                     Toast.makeText(DiaryActivity.this, "Erro a exportar: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 }
             }
-            @Override public void onCancelled(@NonNull DatabaseError error) { /* noop */ }
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
 
-    /* -------------------- PDF helpers -------------------- */
 
-    // Cria o PDF: capa + páginas com cada dia (título, texto do diário, reflexões)
+    //Liga um listener ao nó do diário no Firebase Realtime Database.
+    // - Garante que o listener só é criado uma vez.
+    // - Escuta adições e alterações de entradas no diário (últimos 365 dias).
+    // - Para cada entrada nova ou modificada:
+        // - Obtém a data (chave) e os dados do texto e data de criação.
+        // - Verifica se o texto não está vazio.
+        // - Compara com a entrada local (SQLite) para evitar duplicações
+        // - Se for diferente ou nova, insere/atualiza a entrada local.
+        // - Atualiza a interface com os dados locais.
+    private void attachDiaryListener() {
+        if (diaryRef == null || diaryListener != null) return;
+
+        diaryListener = new ChildEventListener() {
+            private void applyDay(DataSnapshot d) {
+                String dateId = d.getKey(); // yyyy-MM-dd
+                if (dateId == null) return;
+
+                String text = d.child("text").getValue(String.class);
+                Long createdAt = d.child("createdAt").getValue(Long.class);
+                if (text == null || text.trim().isEmpty()) return;
+
+                long when = (createdAt != null ? createdAt : System.currentTimeMillis());
+
+                java.util.List<sqlite.DiaryEntry> existing = db.getDiaryByDate(dateId) != null
+                        ? java.util.Collections.singletonList(db.getDiaryByDate(dateId))
+                        : java.util.Collections.emptyList();
+                boolean same = false;
+                for (sqlite.DiaryEntry e : existing) {
+                    if (e != null && e.text != null && e.text.trim().equals(text.trim())) { same = true; break; }
+                }
+                if (!same) {
+                    db.upsertDiary(dateId, text.trim(), when);
+                }
+                refreshLocalDays();
+            }
+
+            @Override public void onChildAdded(@NonNull DataSnapshot snapshot, String prev) { applyDay(snapshot); }
+            @Override public void onChildChanged(@NonNull DataSnapshot snapshot, String prev) { applyDay(snapshot); }
+            @Override public void onChildRemoved(@NonNull DataSnapshot snapshot) {}
+            @Override public void onChildMoved(@NonNull DataSnapshot snapshot, String prev) { }
+            @Override public void onCancelled(@NonNull DatabaseError error) { }
+        };
+
+        diaryRef.orderByKey().limitToLast(365).addChildEventListener(diaryListener);
+    }
+
+
+    //Liga um listener ao nó de reflexões no Firebase Realtime Database.
+    // - Garante que o listener só é criado uma vez.
+    // - Escuta alterações nos dados de reflexões (últimos 365 dias).
+    // - Para cada dia com reflexões:
+        // - Percorre todas as entradas (reflexões) desse dia.
+        // - Verifica se o texto é válido (não nulo nem vazio).
+        // - Compara com as reflexões já existentes na base de dados local (SQLite).
+        // - Se for nova, insere a reflexão localmente com a data de criação.
+
+
+    private void attachReflectionsListener() {
+        if (reflectionsRef == null || reflectionsListener != null) return;
+
+        reflectionsListener = new ChildEventListener() {
+            private void upsertDay(DataSnapshot daySnap) {
+                String dayKey = daySnap.getKey(); // yyyy-MM-dd
+                if (dayKey == null)
+                    return;
+                List<sqlite.Reflection> existing = db.getReflectionsByDate(dayKey);
+
+                for (DataSnapshot e : daySnap.getChildren()) {
+                    String text = e.child("text").getValue(String.class);
+                    Long createdAt = e.child("createdAt").getValue(Long.class);
+                    if (text == null) continue;
+                    String t = text.trim();
+                    if (t.isEmpty()) continue;
+                    long when = (createdAt != null ? createdAt : System.currentTimeMillis());
+
+                    boolean already = false;
+                    if (existing != null) {
+                        for (sqlite.Reflection r : existing) {
+                            if (r.text != null && r.text.trim().equals(t)) {
+                                already = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!already) {
+                        db.insertReflection(dayKey, t, when);
+                    }
+                }
+            }
+
+
+            @Override
+            public void onChildAdded(@NonNull DataSnapshot snapshot, String previousChildName) {
+                upsertDay(snapshot);
+            }
+            @Override
+            public void onChildChanged(@NonNull DataSnapshot snapshot, String previousChildName) {
+                upsertDay(snapshot);
+            }
+            @Override
+            public void onChildRemoved(@NonNull DataSnapshot snapshot) {
+            }
+            @Override
+            public void onChildMoved(@NonNull DataSnapshot snapshot, String previousChildName)
+                {}
+            @Override
+            public void onCancelled(@NonNull DatabaseError error)
+                {}
+        };
+
+
+        reflectionsRef.orderByKey().limitToLast(365).addChildEventListener(reflectionsListener);
+    }
+
+    /* -------------------- PDF helpers -------------------- */
     private void createPdf(File file, SortedSet<String> dates,
                            Map<String,String> diaryText, Map<String,String> reflText) throws Exception {
 
@@ -465,12 +589,12 @@ public class DiaryActivity extends BaseBottomNavActivity {
 
     /* -------------------- Misc -------------------- */
 
-    @Override protected int currentNavItemId() { return R.id.nav_diary; }
+    @Override
+    protected int currentNavItemId() {
+        return R.id.nav_diary;
+    }
 
-    /**
-     * Validador de datas permitidas no DatePicker (dias com conteúdo).
-     */
-
+    // Permite verificar se a data é valida,ou seja,se estiver algo escrtito fica marcado caso não tenha fica inacessivel
 
     public static class AllowedDaysValidator implements CalendarConstraints.DateValidator, Parcelable {
         private final HashSet<String> allowedDateIds; // "yyyy-MM-dd"

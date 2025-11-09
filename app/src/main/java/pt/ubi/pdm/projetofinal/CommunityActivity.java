@@ -271,7 +271,7 @@ public class CommunityActivity extends BaseBottomNavActivity {
         public String text;
         public String author;
         public Boolean anonymous;
-        public Object createdAt; // ServerValue.TIMESTAMP -> Long
+        public Object createdAt;
         public String uid;
         public Post() {}
     }

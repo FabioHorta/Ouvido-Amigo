@@ -9,13 +9,20 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.Intent;
 import android.os.Build;
-
 import androidx.core.content.ContextCompat;
+
+
+
+// Classe utilitária para gerir alertas e notificações de inatividade.
+// Responsável por criar canais de notificação, agendar alarmes e verificar permissões.
 
 public class Reminders {
 
     private static final String CHANNEL_ID = "reminders";
     private static final int REQ_CODE = 5678;
+
+
+    // Cria o canal de notificações "reminders" com prioridade alta.
 
     public static void createChannel(Context ctx) {
         if (Build.VERSION.SDK_INT >= 26) {
@@ -32,6 +39,9 @@ public class Reminders {
                         == PackageManager.PERMISSION_GRANTED;
     }
 
+
+    // Agenda um alerta de inatividade para ser disparado após um número de horas.
+    // Usa AlarmManager com setExactAndAllowWhileIdle para garantir precisão mesmo em modo de economia de energia.
     public static void scheduleInactivityAfterHours(Context ctx, int hours) {
         cancelInactivity(ctx); // evita duplicados
         long triggerAt = System.currentTimeMillis() + hours * 60L * 60L * 1000L;
@@ -49,6 +59,7 @@ public class Reminders {
         }
     }
 
+    // Cancela qualquer alerta de inatividade previamente agendado.
     public static void cancelInactivity(Context ctx) {
         Intent i = new Intent(ctx, ReminderReceiver.class);
         PendingIntent pi = PendingIntent.getBroadcast(

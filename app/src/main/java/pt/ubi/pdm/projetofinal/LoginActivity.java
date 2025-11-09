@@ -5,10 +5,8 @@ import android.os.Bundle;
 import android.util.Patterns;
 import android.view.View;
 import android.widget.Toast;
-
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -20,6 +18,17 @@ import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+
+
+    //
+    //Activity responsável pelo ecrã de login da aplicação.
+    //Funcionalidades:
+        //- Login com email e palavra-passe usando Firebase Authentication.
+        //- Login com conta Google (Google Sign-In + Firebase).
+        //- Redireciona automaticamente para a MainActivity se o utilizador já estiver registado.
+        //- Guarda o nome do utilizador nas SharedPreferences para uso posterior na aplicação.
+        //- Valida os dados de entrada (email e password) antes de autenticar.
+
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -60,7 +69,7 @@ public class LoginActivity extends AppCompatActivity {
         super.onStart();
         FirebaseUser u = FirebaseAuth.getInstance().getCurrentUser();
         if (u != null) {
-            // já está logado – guarda/atualiza o nome e vai para a Home
+            // já tem login – guarda/atualiza o nome e vai para a Home
             String nomeUser = u.getDisplayName();
             if (nomeUser == null || nomeUser.trim().isEmpty()) {
                 nomeUser = extractNameFallback(u.getEmail());
@@ -71,7 +80,6 @@ public class LoginActivity extends AppCompatActivity {
             Intent i = new Intent(LoginActivity.this, MainActivity.class);
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(i);
-            // nada de finish() necessário porque limpámos a pilha
         }
     }
 
@@ -96,7 +104,7 @@ public class LoginActivity extends AppCompatActivity {
                     findViewById(R.id.btnLogin).setEnabled(true);
 
                     FirebaseUser u = auth.getCurrentUser();
-                    String nomeUser = null;
+                    String nomeUser;
                     if (u != null) {
                         nomeUser = u.getDisplayName();
                         if (nomeUser == null || nomeUser.trim().isEmpty()) {
@@ -108,7 +116,7 @@ public class LoginActivity extends AppCompatActivity {
 
                     // guardar nome para a Home
                     getSharedPreferences("oa", MODE_PRIVATE)
-                            .edit().putString("nome", nomeUser).apply();
+                            .edit().                                         putString("nome", nomeUser).apply();
 
                     goHome();
                 })
@@ -143,7 +151,6 @@ public class LoginActivity extends AppCompatActivity {
                             if (u != null) {
                                 nomeUser = u.getDisplayName();
                                 if (nomeUser == null || nomeUser.trim().isEmpty()) {
-                                    // tenta nomes do próprio GoogleSignInAccount
                                     nomeUser = account.getGivenName();
                                 }
                                 if (nomeUser == null || nomeUser.trim().isEmpty()) {

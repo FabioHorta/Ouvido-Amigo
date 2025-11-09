@@ -12,14 +12,12 @@ import android.text.TextUtils;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
-
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
-
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
@@ -28,13 +26,18 @@ import com.google.firebase.auth.EmailAuthProvider;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.*;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.*;
+
+
+// Classe responsável pela edição do perfil do utilizador.
+// Permite alterar nome, data de nascimento, foto de perfil, palavra-passe e fazer logout.
+// Suporta sincronização com Firebase e armazenamento local de avatar.
+
 
 public class PerfilActivity extends AppCompatActivity {
 
@@ -72,6 +75,10 @@ public class PerfilActivity extends AppCompatActivity {
                 }
             });
 
+
+    // Inicializa a interface, listeners e referências Firebase.
+    // Liga os botões da UI às respetivas ações (galeria, câmara, guardar, logout, etc).
+
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_perfil);
@@ -99,16 +106,20 @@ public class PerfilActivity extends AppCompatActivity {
 
         profileRef = FirebaseDatabase.getInstance()
                 .getReference("users").child(uid).child("profile");
-        profileRef.keepSynced(true); // 🔸 offline sync
+        profileRef.keepSynced(true); //offline sync
 
         // Avatar local por utilizador
         localAvatarFile = new File(getFilesDir(), "avatar_" + uid + ".jpg");
 
-        // 🔸 carregar dados/foto ao abrir
+        //carregar dados/foto ao abrir
         loadProfile();
     }
 
     /* ------------------ LOAD/SAVE PERFIL ------------------ */
+
+    // Carrega os dados do perfil do Firebase (nome, data de nascimento, foto).
+    // Dá prioridade à foto local, depois à foto em Base64, e por fim usa um ícone por defeito.
+
     private void loadProfile() {
         profileRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override public void onDataChange(@NonNull DataSnapshot snap) {
@@ -142,6 +153,10 @@ public class PerfilActivity extends AppCompatActivity {
         });
     }
 
+
+    // Valida e guarda o nome e data de nascimento no Firebase.
+    // Atualiza também as SharedPreferences locais com o nome do utilizador.
+
     private void saveProfile() {
         String name = val(etName);
         String dobUi = val(etDob);
@@ -157,7 +172,7 @@ public class PerfilActivity extends AppCompatActivity {
 
         profileRef.updateChildren(data)
                 .addOnSuccessListener(v -> {
-                    // 🔸 prefs por utilizador
+                    // prefs por utilizador
                     getSharedPreferences("oa_" + uid, MODE_PRIVATE)
                             .edit().putString("nome", name).apply();
                     Toast.makeText(this, "Perfil atualizado ✅", Toast.LENGTH_SHORT).show();
@@ -167,6 +182,8 @@ public class PerfilActivity extends AppCompatActivity {
     }
 
     /* ------------------ DATE PICKER ------------------ */
+
+    // Abre um seletor de data para escolher a data de nascimento.
     private void openDatePicker() {
         MaterialDatePicker<Long> dp = MaterialDatePicker.Builder.datePicker()
                 .setTitleText("Seleciona a data de nascimento")
@@ -177,8 +194,9 @@ public class PerfilActivity extends AppCompatActivity {
             etDob.setText(new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(c.getTime()));
         });
         dp.show(getSupportFragmentManager(), "dob");
-    }
 
+    }
+    // Converte datas entre os formatos "dd/MM/yyyy" (UI) e "yyyy-MM-dd" (Firebase).
     private String uiToIso(String ddMMyyyy) {
         try {
             Date d = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse(ddMMyyyy);
@@ -193,6 +211,10 @@ public class PerfilActivity extends AppCompatActivity {
     }
 
     /* ------------------ FOTO: GALERIA/CÂMARA/RTDB ------------------ */
+
+    // Mostra um diálogo com opções para escolher uma nova foto de perfil:
+        // Galeria, Câmara ou Remover foto.
+
     private void showPhotoSheet() {
         String[] options = {"Galeria", "Câmara", "Remover foto"};
         new MaterialAlertDialogBuilder(this)
@@ -204,13 +226,13 @@ public class PerfilActivity extends AppCompatActivity {
                 }).show();
     }
 
+    // Solicita permissões e inicia a câmara para tirar uma nova foto.
     private void requestCamera() {
         List<String> need = new ArrayList<>();
         need.add(Manifest.permission.CAMERA);
         if (Build.VERSION.SDK_INT <= 32) need.add(Manifest.permission.READ_EXTERNAL_STORAGE);
         reqPerms.launch(need.toArray(new String[0]));
     }
-
     private void startCamera() {
         try {
             File dir = new File(getExternalFilesDir(null), "tmp");
@@ -223,6 +245,9 @@ public class PerfilActivity extends AppCompatActivity {
             Toast.makeText(this, "Não foi possível abrir a câmara.", Toast.LENGTH_LONG).show();
         }
     }
+
+    // Processa a imagem selecionada ou capturada:
+    // - Redimensiona, mostra na UI, guarda localmente e envia miniatura para o Firebase.
 
     private void handleNewPhotoFromUri(@NonNull Uri uri) {
         Bitmap bmp = decodeDownsample(uri, 2048);
@@ -242,6 +267,7 @@ public class PerfilActivity extends AppCompatActivity {
         profileRef.updateChildren(data);
     }
 
+    // Remove a foto de perfil local e do Firebase.
     private void removeAvatar() {
         if (localAvatarFile.exists()) localAvatarFile.delete();
         imgAvatar.setScaleType(ImageView.ScaleType.CENTER_CROP);
@@ -253,6 +279,10 @@ public class PerfilActivity extends AppCompatActivity {
     }
 
     /* ------------------ PASSWORD + LOGOUT ------------------ */
+
+    // Mostra um diálogo para alterar a palavra-passe:
+    // - Valida os campos e atualiza a password no Firebase.
+
     private void showChangePasswordDialog() {
     // Campo "Nova palavra-passe"
         TextInputLayout tilNew = new TextInputLayout(this);
@@ -336,6 +366,7 @@ public class PerfilActivity extends AppCompatActivity {
                 }).show();
     }
 
+    // Termina a sessão do utilizador e redireciona para o ecrã de login.
     private void logout() {
         FirebaseAuth.getInstance().signOut();
         startActivity(new Intent(this, LoginActivity.class));
@@ -343,6 +374,7 @@ public class PerfilActivity extends AppCompatActivity {
     }
 
     /* ------------------ HELPERS ------------------ */
+    // Funções auxiliares para validação de campos, manipulação de imagens e conversões Base64.
     private String val(TextInputEditText et) {
         return et.getText() == null ? "" : et.getText().toString().trim();
     }
