@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Overlay de shape 100% arredondado (círculo) -->
     <style name="ShapeAppearance.OA.Circle" parent="ShapeAppearance.Material3.Corner.None">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">50%</item>

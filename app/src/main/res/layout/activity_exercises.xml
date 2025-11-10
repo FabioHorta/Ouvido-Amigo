@@ -8,7 +8,6 @@
     android:background="@drawable/bg_teal_gradient"
     tools:context=".ExercisesActivity">
 
-    <!-- Conteúdo rolável -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scroll"
         android:layout_width="0dp"
@@ -36,7 +35,7 @@
                 android:textColor="@color/oa_text"
                 android:layout_marginTop="8dp"/>
 
-            <!-- Cartão: Progresso diário (sem barra, só número) -->
+            <!-- Cartão: Progresso diário  -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardProgresso"
                 android:layout_width="match_parent"
@@ -74,7 +73,6 @@
                         app:layout_constraintTop_toBottomOf="@id/tvProgressoTitulo"
                         app:layout_constraintEnd_toStartOf="@id/tvPercent" />
 
-                    <!-- Só o número (%) à direita -->
                     <TextView
                         android:id="@+id/tvPercent"
                         android:layout_width="wrap_content"
@@ -89,7 +87,6 @@
                 </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Chips (cada chip com width/height definidos) -->
 
             <!-- Áudios relaxantes -->
             <com.google.android.material.chip.ChipGroup

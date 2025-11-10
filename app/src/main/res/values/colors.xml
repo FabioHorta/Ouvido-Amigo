@@ -10,11 +10,11 @@
     <color name="oa_purple">#9C27B0</color>
     <color name="oa_red">#E53935</color>
     <color name="oa_card">#FFFFFF</color>
-    <color name="white_96">#F5FFFFFF</color>   <!-- 96% -->
-    <color name="white_80">#CCFFFFFF</color>   <!-- 80% -->
-    <color name="white_70">#B3FFFFFF</color>   <!-- 70% -->
-    <color name="white_20">#33FFFFFF</color>   <!-- 20% -->
-    <color name="white_10">#1AFFFFFF</color>   <!-- 10% -->
+    <color name="white_96">#F5FFFFFF</color>
+    <color name="white_80">#CCFFFFFF</color>
+    <color name="white_70">#B3FFFFFF</color>
+    <color name="white_20">#33FFFFFF</color>
+    <color name="white_10">#1AFFFFFF</color>
     <color name="oa_bottom_nav_bg">#CC006B68</color>
     <color name="teal_100">#B2DFDB</color>
     <color name="teal_700">#00796B</color>

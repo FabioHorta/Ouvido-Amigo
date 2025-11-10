@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_teal_gradient">
 
-    <!-- Top app bar simples com botão voltar -->
+
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/topBar"
         android:layout_width="0dp"
@@ -19,7 +19,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Cartão branco -->
+
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardEditor"
         android:layout_width="0dp"
@@ -33,7 +33,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- ScrollView interno apenas para o texto -->
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
